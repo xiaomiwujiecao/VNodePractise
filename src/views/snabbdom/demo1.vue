@@ -3,8 +3,9 @@
 </template>
 
 <script>
-import { init } from 'snabbdom/init'
-import { h } from 'snabbdom/h' // helper function for creating vnodes
+import { h } from 'snabbdom/build/package/h'
+import { init } from 'snabbdom/build/package/init'
+import { classModule } from 'snabbdom/build/package/modules/class'
 const MyComponent = props => {
   return h('h1', props.title)
 }
