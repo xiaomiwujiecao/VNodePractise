@@ -1,15 +1,17 @@
 {
-  "name": "vnodecases",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
-  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
   "dependencies": {
     "core-js": "^3.6.5",
-    "vue": "^2.6.11"
+    "lodash": "^4.17.21",
+    "node-sass": "^4.9.2",
+    "sass-loader": "^7.1.0",
+    "snabbdom": "^2.1.0",
+    "vue": "^2.6.11",
+    "vue-router": "3.0.2"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",
@@ -34,9 +36,12 @@
     },
     "rules": {}
   },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ]
+  "name": "vnodecases",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "version": "0.1.0"
 }
