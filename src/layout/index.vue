@@ -1,17 +1,17 @@
 <template>
   <div class="app-wrapper">
-    <app-main/>
+    <app-main />
   </div>
 </template>
 
 <script>
-import {AppMain} from './components'
+import { AppMain } from './components'
 
 export default {
-  name: "Layout",
+  name: 'Layout',
   components: {
-    AppMain
-  }
+    AppMain,
+  },
 }
 </script>
 

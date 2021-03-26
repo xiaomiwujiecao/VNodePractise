@@ -6,37 +6,36 @@
 </template>
 
 <script>
-
-import {template} from 'lodash'
-import {default as compiler} from './MyComponent'
-import setTitle from "@/mixins/setTitle";
+import { template } from 'lodash'
+import { default as compiler } from './MyComponent'
+import setTitle from '@/mixins/setTitle'
 export default {
-  name: "demo1",
+  name: 'demo1',
   mixins: [setTitle],
   data() {
     return {
-      title:'lodash_demo1'
+      title: 'lodash_demo1',
     }
   },
-  methods:{
+  methods: {
     render2DOM() {
       const compiler = template('<h1><%= title %></h1>')
-      const html  = compiler({title: 'customer components'})
+      const html = compiler({ title: 'customer components' })
       document.getElementById('temp').innerHTML = html
     },
 
     renderWithCompilerFunc() {
       // debugger
-      document.getElementById('temp2').innerHTML = compiler({title:'second components'})
-    }
+      document.getElementById('temp2').innerHTML = compiler({
+        title: 'second components',
+      })
+    },
   },
   mounted() {
-   this.render2DOM()
+    this.render2DOM()
     this.renderWithCompilerFunc()
-  }
+  },
 }
 </script>
 
-<style scoped lang="scss">
-
-</style>
+<style scoped lang="scss"></style>

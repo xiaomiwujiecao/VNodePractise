@@ -1,10 +1,10 @@
 export default {
-  methods:{
+  methods: {
     setTitle() {
-      document.title=this.title
-    }
+      document.title = this.title
+    },
   },
   created() {
     this.setTitle()
-  }
+  },
 }
