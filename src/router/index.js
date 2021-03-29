@@ -31,6 +31,11 @@ export const constantRoutes = [
         component: () => import('@/views/snabbdom/demo2'),
         name: 'snabbdomDemo2',
       },
+      {
+        path: 'demo3',
+        component: () => import('@/views/snabbdom/demo3'),
+        name: 'snabbdomDemo3',
+      },
     ],
   },
 ]
