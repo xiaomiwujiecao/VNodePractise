@@ -4,8 +4,8 @@
   </div>
 </template>
 
-<script>
-import { Fragment, h, Portal } from '@/try/VNode/render'
+<script lang="ts">
+import { Fragment, h, Portal } from '@/try/VNode/core'
 import Vue from 'vue'
 import Component from 'vue-class-component'
 import MyDefinedComponent from '@/try/VNode/Component'
