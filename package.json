@@ -8,6 +8,7 @@
     "@types/webpack-env": "^1.16.0",
     "core-js": "^3.6.5",
     "lodash": "^4.17.21",
+    "maplerender": "^1.0.1",
     "node-sass": "^4.9.2",
     "sass-loader": "^7.1.0",
     "snabbdom": "^2.1.0",

@@ -14,12 +14,9 @@
 <script>
 import Vue from 'vue'
 import Component from 'vue-class-component'
-import { h, render } from './maple-render/main.js'
-import Main from './maple-render/main.js'
-console.log(Main)
-console.log(h)
-console.log(render)
-// import { render } from '@/try/VNode/core.ts'
+import { h, render } from 'maplerender'
+import { MyComponent } from '@/views/snabbdom/MyComponent.ts'
+import { MyFunctionalComponent } from '@/views/snabbdom/MyFunctionalComponent.ts'
 @Component
 export default class Demo5 extends Vue {
   mounted() {
@@ -49,6 +46,16 @@ export default class Demo5 extends Vue {
       }),
     )
     render(elVNode, document.getElementById('demo5'))
+
+    // h 函数的第一个参数是组件类
+    const elCLassComponentVNode = h(MyComponent)
+    render(
+      elCLassComponentVNode,
+      document.getElementById('customer-class-component'),
+    )
+
+    const functionalComponent = h(MyFunctionalComponent)
+    render(functionalComponent, document.getElementById('functional-component'))
   }
 }
 </script>
