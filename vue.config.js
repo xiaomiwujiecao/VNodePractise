@@ -4,6 +4,20 @@ function resolve(dir) {
 }
 module.exports = {
   lintOnSave: true,
+  productionSourceMap: false,
+  devServer: {
+    host: '127.0.0.1',
+    disableHostCheck: true,
+    historyApiFallback: true,
+    port: 8080,
+    open: true,
+    inline: true,
+    hot: true,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+  },
   configureWebpack: {
     resolve: {
       extensions: ['.tsx', '.ts', '.mjs', '.js', '.jsx', '.vue', '.json', '.wasm'],

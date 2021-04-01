@@ -5,5 +5,5 @@ export interface VNode {
   children:any,
   flags:number,
   childFlags:number,
-  el:number,
+  el:any,
 }

@@ -2,6 +2,7 @@ import { VNodeFlags } from '@/enum/VNodeFlags'
 import { ChildrenFlags } from '@/enum/ChildrenFlags'
 import { VNode } from '@/try/VNode/VNode'
 import { isObject, isArray, isString } from '@/try/VNode/util'
+import { domPropsRE } from '@/try/VNode/rule'
 
 export const Fragment = Symbol.for('Fragment')
 export const Portal = Symbol.for('Portal')
@@ -12,20 +13,20 @@ function normalizeVNodes(children: any) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.key == null) {
-      // 如果原来的 VNode 没有key，则使用竖线(|)与该VNode在数组中的索引拼接而成的字符串作为key
       child.key = '|' + i
     }
     newChildren.push(child)
   }
-  // 返回新的children，此时 children 的类型就是 ChildrenFlags.KEYED_VNODES
   return newChildren
 }
+
 function normalizeClass(classValue: any) {
   function concatString() {
     for (let i = 0; i < classValue.length; i++) {
       res += normalizeClass(classValue[i]) + ' '
     }
   }
+
   function concatObjectValue() {
     for (const name in classValue) {
       if (classValue[name]) {
@@ -33,6 +34,7 @@ function normalizeClass(classValue: any) {
       }
     }
   }
+
   let res = ''
   isString(classValue) && (res = classValue)
   isArray(classValue) && concatString()
@@ -44,13 +46,10 @@ function normalizeClass(classValue: any) {
 function createTextVNode(text: string) {
   return {
     _isVNode: true,
-    // flags 是 VNodeFlags.TEXT
     flags: VNodeFlags.TEXT,
     tag: null,
     data: null,
-    // 纯文本类型的 VNode，其 children 属性存储的是与之相符的文本内容
     children: text,
-    // 文本节点没有子节点
     childFlags: ChildrenFlags.NO_CHILDREN,
     el: null,
   }
@@ -66,45 +65,39 @@ export function h(tag, data = null, children = null) {
     flags = VNodeFlags.PORTAL
     tag = data && data.target
   } else {
-    // 兼容 Vue2 的对象式组件
     if (tag !== null && typeof tag === 'object') {
       flags = tag.functional
-        ? VNodeFlags.COMPONENT_FUNCTIONAL // 函数式组件
-        : VNodeFlags.COMPONENT_STATEFUL_NORMAL // 有状态组件
+        ? VNodeFlags.COMPONENT_FUNCTIONAL // functional
+        : VNodeFlags.COMPONENT_STATEFUL_NORMAL // stateful
     } else if (typeof tag === 'function') {
-      // Vue3 的类组件
       flags =
         tag.prototype && tag.prototype.render
-          ? VNodeFlags.COMPONENT_STATEFUL_NORMAL // 有状态组件
-          : VNodeFlags.COMPONENT_FUNCTIONAL // 函数式组件
+          ? VNodeFlags.COMPONENT_STATEFUL_NORMAL
+          : VNodeFlags.COMPONENT_FUNCTIONAL
     }
   }
 
   let childFlags = null
   if (!Array.isArray(children)) {
     if (children == null) {
-      // 没有子节点
       childFlags = ChildrenFlags.NO_CHILDREN
     } else if (children._isVNode) {
-      // 单个子节点
       childFlags = ChildrenFlags.SINGLE_VNODE
     } else {
-      // 其他情况都作为文本节点处理，即单个子节点，会调用 createTextVNode 创建纯文本类型的 VNode
       childFlags = ChildrenFlags.SINGLE_VNODE
       children = createTextVNode(children + '')
     }
   } else {
     const { length } = children
     switch (length) {
-      case 0: // 没有 children
+      case 0:
         childFlags = ChildrenFlags.NO_CHILDREN
         break
-      case 1: // 单个子节点
+      case 1:
         childFlags = ChildrenFlags.SINGLE_VNODE
         children = children[0]
         break
       default:
-        // 多个子节点，且子节点使用key
         childFlags = ChildrenFlags.KEYED_VNODES
         children = normalizeVNodes(children)
         break
@@ -119,12 +112,11 @@ export function h(tag, data = null, children = null) {
     flags,
     childFlags,
     el: null,
-    // 其他属性...
   }
 }
 
 /**
- * 挂载普通元素
+ * mount normal elements
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG {boolean}
@@ -136,18 +128,20 @@ function mountElement(
 ) {
   isSVG = isSVG || vnode.flags & VNodeFlags.ELEMENT_SVG
 
-  // --------------------------------------------------
+  // -----------------------------------------------------------------------------------------------------------------
   // line:112; description:2021/3/29; bind style options
-  // --------------------------------------------------
+  // -----------------------------------------------------------------------------------------------------------------
   function bindStyle() {
-    // 如果 VNodeData 存在，则遍历之
+    // If VNodeData exists, traverse it
     for (let key in data) {
-      // key 可能是 class、style、on 等等
+      // key maybe class、style、on etc.
       switch (key) {
         case 'style':
-          // 如果 key 的值是 style，说明是内联样式，逐个将样式规则应用到 el
+          // if key' value is style，it  is inline style, apply style rules to el one by one
           for (let k in data.style) {
-            el.style[k] = data.style[k]
+            if (data.style[k]) {
+              el.style[k] = data.style[k]
+            }
           }
           break
         case 'class':
@@ -157,24 +151,36 @@ function mountElement(
             el.className = normalizeClass(data[key])
           }
           break
+        default:
+          if (key.charAt(0) === 'o' && key.charAt(1) === 'n') {
+            // add event
+            el.addEventListener(key.slice(2), data[key])
+          } else if (domPropsRE.test(key)) {
+            // treat it as DOM property
+            el[key] = data[key]
+          } else {
+            // treat it as attributes
+            el.setAttribute(key, data[key])
+          }
       }
     }
   }
-  // --------------------------------------------------
+
+  // -----------------------------------------------------------------------------------------------------------------
   // line:129; description:2021/3/29; bind children options
-  // --------------------------------------------------
+  // -----------------------------------------------------------------------------------------------------------------
   function bindChildren() {
-    // 检测如果没有子节点则无需递归挂载
+    // -----------------------------------------------------------------------------------------------------------------
+    // line:188; description:2021/3/30; No need to recursive mount if there are no child nodes
+    // -----------------------------------------------------------------------------------------------------------------
     if (childFlags === ChildrenFlags.NO_CHILDREN) {
       return
     }
     if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-      // 如果是单个子节点则调用 mount 函数挂载
       mount(children, el, isSVG)
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
-      // 如果是单多个子节点则遍历并调用 mount 函数挂载
-      for (let i = 0; i < children.length; i++) {
-        mount(children[i], el, isSVG)
+      for (const child of children) {
+        mount(child, el, isSVG)
       }
     }
   }
@@ -182,7 +188,6 @@ function mountElement(
   const el = isSVG
     ? document.createElementNS('http://www.w3.org/2000/svg', vnode.tag)
     : document.createElement(vnode.tag)
-  // 获取 data
   const data = vnode.data
   data && bindStyle()
   // child flags children
@@ -194,59 +199,120 @@ function mountElement(
   container.appendChild(el)
 }
 
+function mountStatefulComponent(vnode: VNode, container: HTMLElement, isSVG) {
+  const instance = new vnode.tag()
+  instance.$vnode = instance.render()
+  mount(instance.$vnode, container, isSVG)
+  instance.$el = vnode.el = instance.$vnode.el
+}
+
+function mountFunctionalComponent(vnode: VNode, container: HTMLElement, isSVG) {
+  const $vnode = vnode.tag()
+  mount($vnode, container, isSVG)
+  vnode.el = $vnode.el
+}
+
 /**
- * 挂载组件
+ * mount components
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountComponent(vnode, container, isSVG) {}
+function mountComponent(vnode: VNode, container: HTMLElement, isSVG) {
+  const { flags } = vnode
+  if (flags & VNodeFlags.COMPONENT_STATEFUL) {
+    mountStatefulComponent(vnode, container, isSVG)
+  } else {
+    mountFunctionalComponent(vnode, container, isSVG)
+  }
+}
 
 /**
- * 挂载文本
+ * mount text
  * @param vnode {VNode}
  * @param container {HTMLElement}
  */
-function mountText(vnode, container) {}
+function mountText(vnode: VNode, container: HTMLElement) {
+  const el = document.createTextNode(vnode.children)
+  vnode.el = el
+  container.appendChild(el)
+}
 
 /**
- * 挂载 Fragment
+ * mount Fragment
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountFragment(vnode, container, isSVG) {}
+function mountFragment(vnode: VNode, container: HTMLElement, isSVG) {
+  const { children, childFlags } = vnode
+  switch (childFlags) {
+    case ChildrenFlags.NO_CHILDREN:
+      const placeholder = createTextVNode('')
+      mountText(placeholder, container)
+      vnode.el = placeholder.el
+      break
+    case ChildrenFlags.SINGLE_VNODE:
+      mount(children, container, isSVG)
+      vnode.el = children.el
+      break
+    default:
+      for (const node of children) {
+        mount(node, container, isSVG)
+      }
+      vnode.el = children[0].el
+  }
+}
 
 /**
- * 挂载 Portal
+ * mount Portal
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG
  */
-function mountPortal(vnode, container, isSVG) {}
+function mountPortal(vnode: VNode, container: HTMLElement, isSVG) {
+  const { tag, children, childFlags } = vnode
+  const target = typeof tag === 'string' ? document.querySelector(tag) : tag
+  if (childFlags & ChildrenFlags.SINGLE_VNODE) {
+    // -----------------------------------------------------------------------------------------------------------------
+    // line:273; description:2021/3/30; single node
+    // -----------------------------------------------------------------------------------------------------------------
+    mount(vnode, target)
+  } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
+    // -----------------------------------------------------------------------------------------------------------------
+    // line:278; description:2021/3/30; multiple nodes
+    // -----------------------------------------------------------------------------------------------------------------
+    for (const child of children) {
+      mount(child, target)
+    }
+  }
+  const placeholder = createTextVNode('')
+  mountText(placeholder, container)
+  vnode.el = placeholder.el
+}
 
 /**
- * 渲染函数
+ * render function
  * @param vnode {VNode}
  * @param container {HTMLElement}
  * @param isSVG {boolean}
  */
-function mount(vnode, container, isSVG?) {
+function mount(vnode: VNode, container: HTMLElement, isSVG?) {
   const { flags } = vnode
   if (flags & VNodeFlags.ELEMENT) {
-    // 挂载普通标签
+    // mount normal label
     mountElement(vnode, container, isSVG)
   } else if (flags & VNodeFlags.COMPONENT) {
-    // 挂载组件
+    // mount component
     mountComponent(vnode, container, isSVG)
   } else if (flags & VNodeFlags.TEXT) {
-    // 挂载纯文本
+    // mount pure text
     mountText(vnode, container)
   } else if (flags & VNodeFlags.FRAGMENT) {
-    // 挂载 Fragment
+    // mount Fragment
     mountFragment(vnode, container, isSVG)
   } else if (flags & VNodeFlags.PORTAL) {
-    // 挂载 Portal
+    // mount Portal
     mountPortal(vnode, container, isSVG)
   }
 }
@@ -254,32 +320,49 @@ function mount(vnode, container, isSVG?) {
 /**
  * patch
  * @param vnode {VNode}
- * @param container {HTMLElement}
+ * @param container {HTMLElement}-
  */
 function patch(prevVNode: any, vnode, container) {}
 
 /**
- * 渲染函数
+ * render function
  * @param vnode {VNode}
  * @param container {HTMLElement}
  */
-export function render(vnode, container) {
+export function render(
+  vnode: VNode,
+  container: HTMLElement & { vnode?: VNode },
+) {
   const prevVNode = container.vnode
   if (prevVNode == null) {
     if (vnode) {
-      // 没有旧的 VNode，只有新的 VNode。使用 `mount` 函数挂载全新的 VNode
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:324; description:2021/3/30;
+      // There is no old VNode, only a new VNode.
+      // Use the `mount` function to mount a brand new VNode
+      // -----------------------------------------------------------------------------------------------------------------
       mount(vnode, container)
-      // 将新的 VNode 添加到 container.vnode 属性下，这样下一次渲染时旧的 VNode 就存在了
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:330; description:2021/3/30;
+      // Add the new VNode to the container.vnode property, so that the old VNode will exist in the next rendering
+      // -----------------------------------------------------------------------------------------------------------------
       container.vnode = vnode
     }
   } else {
     if (vnode) {
-      // 有旧的 VNode，也有新的 VNode。则调用 `patch` 函数打补丁
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:332; description:2021/3/30;
+      // There are old VNodes, and there are new VNodes.
+      // Then call the `patch` function to patch
+      // -----------------------------------------------------------------------------------------------------------------
       patch(prevVNode, vnode, container)
-      // 更新 container.vnode
+      // update container.vnode
       container.vnode = vnode
     } else {
-      // 有旧的 VNode 但是没有新的 VNode，这说明应该移除 DOM，在浏览器中可以使用 removeChild 函数。
+      // -----------------------------------------------------------------------------------------------------------------
+      // line:338; description:2021/3/30;       // There is an old VNode but no new VNode,\
+      // which means that the DOM should be removed. You can use the removeChild function in the browser.
+      // -----------------------------------------------------------------------------------------------------------------
       container.removeChild(prevVNode.el)
       container.vnode = null
     }
